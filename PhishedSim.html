@@ -1,0 +1,552 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Knowledge Check: Phishing Awareness Simulator</title>
+  <style>
+    :root{
+      --accent-1: #1e3a8a;
+      --accent-2: #3b82f6;
+      --danger: #dc3545;
+      --success: #28a745;
+      --bg-1: #f8f9fa;
+      --bg-2: #e9ecef;
+      --card-bg: #ffffff;
+      --text: #222;
+      --muted: #666;
+      --max-width: 960px;
+    }
+    html,body{height:100%; margin:0;}
+    body {
+      font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+      background: linear-gradient(135deg, var(--bg-1) 0%, var(--bg-2) 100%);
+      margin: 0;
+      padding: 24px;
+      color: var(--text);
+      -webkit-font-smoothing:antialiased;
+      -moz-osx-font-smoothing:grayscale;
+    }
+    #game-container {
+      max-width: var(--max-width);
+      margin: 0 auto;
+      background: var(--card-bg);
+      padding: 24px;
+      border-radius: 10px;
+      box-shadow: 0 6px 22px rgba(15,23,42,0.08);
+    }
+    h1 { margin: 0 0 6px 0; font-size: 1.6rem; }
+    h2 { margin: 8px 0 12px 0; font-size: 1.1rem; color: var(--muted); font-weight:600; }
+    p { margin: 0 0 12px 0; line-height:1.45; color:#333; }
+    .start-button {
+      background: linear-gradient(135deg, var(--accent-1), var(--accent-2));
+      color: white;
+      border: none;
+      padding: 14px 36px;
+      font-size: 1.05rem;
+      font-weight: 700;
+      border-radius: 8px;
+      cursor: pointer;
+      display: inline-block;
+      margin: 12px 6px 0 0;
+      text-transform: uppercase;
+      letter-spacing: 0.6px;
+    }
+    .start-button:hover { transform:translateY(-2px); }
+    .control-row { text-align:center; margin: 18px 0; }
+    #difficulty-select .btn {
+      margin: 6px;
+    }
+    .btn {
+      margin: 6px;
+      padding: 10px 18px;
+      font-size: 15px;
+      cursor: pointer;
+      border-radius: 8px;
+      border: none;
+      font-weight: 700;
+    }
+    .btn-phish { background: var(--danger); color: white; }
+    .btn-legit { background: var(--success); color: white; }
+    .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+    .email-client {
+      border: 1px solid #e6e9ef;
+      border-radius: 8px;
+      margin: 18px 0;
+      box-shadow: 0 4px 14px rgba(2,6,23,0.04);
+      overflow: hidden;
+    }
+    .email-header {
+      background: #fbfdff;
+      padding: 14px 18px;
+      border-bottom: 1px solid #f1f4f8;
+      font-size: 14px;
+    }
+    .email-body {
+      padding: 18px;
+      text-align: left;
+      background: var(--card-bg);
+      line-height: 1.6;
+      font-size: 15px;
+      color: #222;
+      min-height: 120px;
+    }
+    .email-body a {
+      color: #0b66cc;
+      font-weight: 700;
+      text-decoration: underline;
+    }
+    .meta-row { display:flex; justify-content:space-between; align-items:center; gap:12px; margin-top:6px; }
+    .small { font-size: 13px; color: var(--muted); }
+    .hidden { display: none; }
+    #phished-page { padding: 36px; text-align:center; }
+    .phished-warning h1 { color: var(--danger); margin-bottom:6px; font-size:1.4rem; }
+    .feedback { margin-top: 14px; font-weight: 700; }
+    .reason { font-style: italic; font-weight:600; color: #444; margin-top:6px; }
+    .headers-box {
+      background:#fbfbfd; border:1px dashed #e3e7ef; padding:12px; margin-top:10px; font-family:monospace; white-space:pre-wrap; font-size:13px; color:#333; border-radius:6px;
+    }
+    #end-screen { text-align:center; padding:18px; }
+    .summary-list { text-align:left; margin-top:12px; }
+    .summary-list li { margin-bottom:8px; }
+    .top-row { display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap; }
+    @media (max-width:640px){
+      .top-row{flex-direction:column; align-items:flex-start;}
+      .email-body { font-size:15px; }
+      .start-button { width:100%; text-align:center; }
+    }
+  </style>
+</head>
+<body>
+  <div id="game-container">
+    <div id="main-game">
+      <div class="top-row">
+        <div>
+          <h1>Infiltrated: Phishing Awareness Training</h1>
+          <p>Test your ability to identify phishing emails. You'll be shown <strong>10</strong> email samples. Can you spot the threats?</p>
+        </div>
+        <div style="text-align:right;">
+          <div class="small">Tip: Click "View Headers" to inspect simulated delivery headers.</div>
+        </div>
+      </div>
+
+      <div style="margin-top:10px;">
+        <button class="start-button" id="startBtn">Begin Training</button>
+      </div>
+
+      <!-- Difficulty selector -->
+      <div id="difficulty-select" class="hidden" style="text-align:center; margin-top:14px;">
+        <h2>Select Difficulty</h2>
+        <div>
+          <button class="btn" onclick="setDifficulty('easy')">Easy</button>
+          <button class="btn" onclick="setDifficulty('medium')">Medium</button>
+          <button class="btn" onclick="setDifficulty('hard')">Hard</button>
+        </div>
+        <div class="small" style="margin-top:8px;">
+          Easy = obvious phishing signals. Medium = plausible impersonation. Hard = realistic & targeted.
+        </div>
+      </div>
+
+      <!-- Game area -->
+      <div id="game" class="hidden">
+        <h2 id="email-count" class="small"></h2>
+
+        <div class="email-client" aria-live="polite">
+          <div class="email-header" id="email-header"></div>
+          <div class="email-body" id="email-body"></div>
+        </div>
+
+        <div class="meta-row">
+          <div>
+            <button class="btn btn-phish" id="btnPhish">This is PHISHING</button>
+            <button class="btn btn-legit" id="btnLegit">This is LEGIT</button>
+          </div>
+          <div>
+            <button class="btn" id="btnViewHeaders" onclick="toggleHeaders()">View Headers</button>
+          </div>
+        </div>
+
+        <div id="headers-area" class="hidden">
+          <div class="headers-box" id="headers-box"></div>
+        </div>
+
+        <div id="feedback" class="feedback"></div>
+        <div id="reason" class="reason"></div>
+
+        <div id="next-btn" class="hidden" style="text-align:center; margin-top:18px;">
+          <button class="btn" onclick="nextEmail()">Next Email</button>
+        </div>
+      </div>
+
+      <!-- End screen -->
+      <div id="end-screen" class="hidden">
+        <h2>Training Complete!</h2>
+        <p id="score-display" style="font-size:1.1rem; font-weight:700;"></p>
+
+        <div style="margin-top:12px; text-align:left;">
+          <h3 style="margin-bottom:6px;">Review Summary</h3>
+          <ul id="summary-list" class="summary-list"></ul>
+        </div>
+
+        <div style="margin-top:16px;">
+          <button class="btn" onclick="location.reload()">Try Again</button>
+        </div>
+      </div>
+
+      <!-- Hidden Phished Page -->
+      <div id="phished-page" class="hidden">
+        <div class="phished-warning" style="padding:40px;">
+          <h1>🛑 You Have Been Phished!</h1>
+          <p>This link was part of a phishing email. Always inspect links before clicking and verify the sender.</p>
+          <div style="margin-top:18px;">
+            <button class="btn" onclick="goBack()">Go Back and Try Again</button>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <script>
+    /*************************************************************************
+     * Phishing Simulator - Full file
+     * Option A: 10 total emails (Easy:4, Medium:3, Hard:3)
+     * - Manual review (Next Email button)
+     * - Difficulty selection
+     * - Safe link interception via a single click handler
+     * - View simulated headers
+     *************************************************************************/
+
+    // --- Email datasets (Easy:4, Medium:3, Hard:3) ---
+    const emailsEasy = [
+      {
+        id: "E1",
+        from: "Registrar <registrar@wcc.edu>",
+        subject: "Final Exam Schedule Released",
+        body: `You can now view your final exam dates via the <strong>student portal</strong>.`,
+        isPhishing: false,
+        reason: "Legitimate internal academic email",
+        headers: `From: Registrar <registrar@wcc.edu>
+Return-Path: registrar@wcc.edu
+Received: from mail.wcc.edu (mail.wcc.edu [10.0.0.1])`
+      },
+      {
+        id: "E2",
+        from: "SGA Events <sga@wcc.edu>",
+        subject: "Join us at the Club Fair this Thursday!",
+        body: `Stop by the quad this Thursday at 1 PM for food, music, and prizes.`,
+        isPhishing: false,
+        reason: "WCC internal student event",
+        headers: `From: SGA Events <sga@wcc.edu>
+Return-Path: sga@wcc.edu
+Received: from mail.wcc.edu (mail.wcc.edu [10.0.0.2])`
+      },
+      {
+        id: "E3",
+        from: "PayPal Security <alerts@paypai.com>",
+        subject: "Your account has been limited",
+        body: `A limitation has been placed on your PayPal account.<br><a href="#phished" data-phish="true" onclick="handlePhishClick(event)">Resolve Now</a>.`,
+        isPhishing: true,
+        reason: "Misspelled domain 'paypai.com' (typosquatting)",
+        headers: `From: PayPal Security <alerts@paypai.com>
+Return-Path: alerts@paypai.com
+Received: from unknown (untrusted-host [198.51.100.20])`
+      },
+      {
+        id: "E4",
+        from: "Microsoft Security <support@rnicrosoft.com>",
+        subject: "Verify your account to avoid suspension",
+        body: `Unusual activity detected.<br><a href="#phished" data-phish="true" onclick="handlePhishClick(event)">Click here to verify</a> to verify your credentials.`,
+        isPhishing: true,
+        reason: "Lookalike domain using 'r' instead of 'm' in Microsoft",
+        headers: `From: Microsoft Security <support@rnicrosoft.com>
+Return-Path: support@rnicrosoft.com
+Received: from suspicious.mail-host (suspicious.mail-host [203.0.113.45])`
+      }
+    ];
+
+    const emailsMedium = [
+      {
+        id: "M1",
+        from: "Dropbox <shared-files@dropboxservice.com>",
+        subject: "📁 You've received a new shared file",
+        body: `You’ve received a file.<br><a href="#phished" data-phish="true" onclick="handlePhishClick(event)">Open Now</a>`,
+        isPhishing: true,
+        reason: "Fake domain ‘dropboxservice.com’ mimicking Dropbox",
+        headers: `From: Dropbox <shared-files@dropboxservice.com>
+Return-Path: shared-files@dropboxservice.com
+Received: from mail.dropboxservice.com (mail.dropboxservice.com [198.51.100.33])`
+      },
+      {
+        id: "M2",
+        from: "WCC HR <hr@wcc.edu>",
+        subject: "Open Enrollment: Action Required",
+        body: `Enroll in your 2025 benefits package before Dec 5. Visit the HR portal.`,
+        isPhishing: false,
+        reason: "Standard internal HR communication",
+        headers: `From: WCC HR <hr@wcc.edu>
+Return-Path: hr@wcc.edu
+Received: from mail.wcc.edu (mail.wcc.edu [10.0.0.4])`
+      },
+      {
+        id: "M3",
+        from: "Admin <admin@wcc.edu>",
+        subject: "New Policy Agreement — Signature Required",
+        body: `You must review and sign the new Acceptable Use Policy.<br><a href="#phished" data-phish="true" onclick="handlePhishClick(event)">View Policy</a>`,
+        isPhishing: true,
+        reason: "Legitimate-looking sender, but link could be spoofed",
+        headers: `From: Admin <admin@wcc.edu>
+Return-Path: admin@wcc.edu
+Received: from mail.external (mail.external [198.51.100.77])`
+      }
+    ];
+
+    const emailsHard = [
+      {
+        id: "H1",
+        from: "IT Support <it-support@wcc-security.edu>",
+        subject: "Urgent Duo Push Attempt — Reset Password",
+        body: `You received a Duo push. Was this you?<br><a href="#phished" data-phish="true" onclick="handlePhishClick(event)">Reset Password</a>`,
+        isPhishing: true,
+        reason: "Fake internal-looking domain 'wcc-security.edu' that impersonates IT",
+        headers: `From: IT Support <it-support@wcc-security.edu>
+Return-Path: it-support@wcc-security.edu
+Received: from unknown (suspicious-source [203.0.113.88])`
+      },
+      {
+        id: "H2",
+        from: "Google Alert <no-reply@secure.google.account-review.com>",
+        subject: "New login from Chrome on Windows",
+        body: `Someone logged into your Google account.<br><a href="#phished" data-phish="true" onclick="handlePhishClick(event)">Check Activity</a>`,
+        isPhishing: true,
+        reason: "Phishing subdomain trick (multi-part host that appears legitimate)",
+        headers: `From: Google Alert <no-reply@secure.google.account-review.com>
+Return-Path: no-reply@secure.google.account-review.com
+Received: from external.host (external.host [198.51.100.95])`
+      },
+      {
+        id: "H3",
+        from: "Dean of Students <dean@wcc.edu>",
+        subject: "Reminder: Academic Integrity Policy",
+        body: `Please review the latest version of the WCC academic integrity guidelines.`,
+        isPhishing: false,
+        reason: "Legit internal message",
+        headers: `From: Dean of Students <dean@wcc.edu>
+Return-Path: dean@wcc.edu
+Received: from mail.wcc.edu (mail.wcc.edu [10.0.0.6])`
+      }
+    ];
+
+    // --- Runtime state ---
+    let emails = [];           // final selected pool (10 emails)
+    let current = 0;
+    let score = 0;
+    let selectedDifficulty = "";
+    let missed = [];           // collect missed items for review summary
+    const TOTAL_EMAILS = 10;   // fixed for Option A
+
+    // --- DOM elements ---
+    const startBtn = document.getElementById('startBtn');
+    const difficultySelect = document.getElementById('difficulty-select');
+    const gameEl = document.getElementById('game');
+    const emailCountEl = document.getElementById('email-count');
+    const emailHeaderEl = document.getElementById('email-header');
+    const emailBodyEl = document.getElementById('email-body');
+    const feedbackEl = document.getElementById('feedback');
+    const reasonEl = document.getElementById('reason');
+    const nextBtnEl = document.getElementById('next-btn');
+    const btnPhish = document.getElementById('btnPhish');
+    const btnLegit = document.getElementById('btnLegit');
+    const phishedPage = document.getElementById('phished-page');
+    const mainGame = document.getElementById('main-game');
+    const endScreen = document.getElementById('end-screen');
+    const scoreDisplay = document.getElementById('score-display');
+    const summaryList = document.getElementById('summary-list');
+    const headersArea = document.getElementById('headers-area');
+    const headersBox = document.getElementById('headers-box');
+    const btnViewHeaders = document.getElementById('btnViewHeaders');
+
+    // --- Start button: reveal difficulty choices ---
+    startBtn.addEventListener('click', () => {
+      startBtn.classList.add('hidden');
+      difficultySelect.classList.remove('hidden');
+    });
+
+    // --- Difficulty selection function ---
+    function setDifficulty(level) {
+      selectedDifficulty = level;
+      // Build the email pool to reach TOTAL_EMAILS:
+      // Option A: Easy 4, Medium 3, Hard 3
+      emails = [
+        ...emailsEasy.slice(0,4),
+        ...emailsMedium.slice(0,3),
+        ...emailsHard.slice(0,3)
+      ];
+      // Shuffle pool for randomness
+      emails.sort(() => Math.random() - 0.5);
+
+      // Reset runtime state and UI
+      current = 0; score = 0; missed = [];
+      difficultySelect.classList.add('hidden');
+      gameEl.classList.remove('hidden');
+      showEmail();
+    }
+
+    // --- Show the current email ---
+    function showEmail() {
+      // Hide phished/end screens if somehow visible
+      phishedPage.classList.add('hidden');
+      endScreen.classList.add('hidden');
+
+      if (current >= emails.length) {
+        endGame();
+        return;
+      }
+
+      const email = emails[current];
+      emailCountEl.innerText = `Email ${current + 1} of ${emails.length} — Difficulty: ${selectedDifficulty || 'mixed'}`;
+      emailHeaderEl.innerHTML = `<strong>From:</strong> ${escapeHtml(email.from)}<br><strong>Subject:</strong> ${escapeHtml(email.subject)}`;
+      // Set body HTML (we intentionally include safe basic HTML tags in body)
+      emailBodyEl.innerHTML = email.body;
+
+      // Reset feedback, reason, headers, and buttons
+      feedbackEl.innerHTML = '';
+      reasonEl.innerHTML = '';
+      headersBox.textContent = ''; headersArea.classList.add('hidden');
+      nextBtnEl.classList.add('hidden');
+      btnPhish.disabled = false; btnLegit.disabled = false;
+      btnViewHeaders.disabled = false;
+
+      // Ensure anchor clicks in the email body go through our central handler.
+      // Our links already have onclick="handlePhishClick(event)" in datasets above.
+      // But for safety, attach a delegated listener once (idempotent).
+    }
+
+    // --- Central safe phish handler (used by links injected into bodies) ---
+    function handlePhishClick(e) {
+      if (e && e.preventDefault) e.preventDefault();
+      showPhishedPage();
+      return false;
+    }
+
+    // --- Toggle headers area ---
+    function toggleHeaders() {
+      if (headersArea.classList.contains('hidden')) {
+        // Show current email headers
+        const email = emails[current];
+        headersBox.textContent = email.headers || 'No headers available.';
+        headersArea.classList.remove('hidden');
+        btnViewHeaders.textContent = 'Hide Headers';
+      } else {
+        headersArea.classList.add('hidden');
+        btnViewHeaders.textContent = 'View Headers';
+      }
+    }
+
+    // --- Submit answer (manual review flow, no auto-advance) ---
+    function submitAnswer(userSaysPhishing) {
+      const email = emails[current];
+      const isCorrect = userSaysPhishing === email.isPhishing;
+
+      if (isCorrect) {
+        score++;
+        feedbackEl.innerHTML = `<span style="color:${isCorrect ? 'var(--success)' : 'var(--danger)'};">${isCorrect ? '✅ Correct!' : '❌ Incorrect.'}</span>`;
+      } else {
+        feedbackEl.innerHTML = `<span style="color:${isCorrect ? 'var(--success)' : 'var(--danger)'};">${isCorrect ? '✅ Correct!' : '❌ Incorrect.'}</span>`;
+        // Record missed for end-of-training review
+        missed.push({
+          id: email.id,
+          from: email.from,
+          subject: email.subject,
+          reason: email.reason,
+          wasPhishing: email.isPhishing,
+          userSaysPhishing: userSaysPhishing
+        });
+      }
+
+      reasonEl.innerHTML = `<div><em>${email.reason}</em></div>`;
+
+      // Show Next button for user to review and continue when ready
+      nextBtnEl.classList.remove('hidden');
+
+      // Disable answer buttons until user clicks Next
+      btnPhish.disabled = true;
+      btnLegit.disabled = true;
+      btnViewHeaders.disabled = false; // allow headers while reviewing
+    }
+
+    // Attach submitAnswer to the two buttons
+    btnPhish.addEventListener('click', () => submitAnswer(true));
+    btnLegit.addEventListener('click', () => submitAnswer(false));
+
+    // --- Next email logic ---
+    function nextEmail() {
+      current++;
+      if (current >= emails.length) {
+        endGame();
+        return;
+      }
+      // Reset header toggle label if necessary
+      if (!headersArea.classList.contains('hidden')) {
+        headersArea.classList.add('hidden');
+        btnViewHeaders.textContent = 'View Headers';
+      }
+      showEmail();
+    }
+
+    // --- Show phished page when clicked on simulated malicious link ---
+    function showPhishedPage() {
+      gameEl.classList.add('hidden');
+      phishedPage.classList.remove('hidden');
+    }
+
+    function goBack() {
+      phishedPage.classList.add('hidden');
+      gameEl.classList.remove('hidden');
+    }
+
+    // --- End game: show results and review summary ---
+    function endGame() {
+      gameEl.classList.add('hidden');
+      endScreen.classList.remove('hidden');
+      scoreDisplay.textContent = `You identified ${score} out of ${emails.length} emails correctly.`;
+      // Build review summary list (prioritize missed items)
+      summaryList.innerHTML = '';
+      if (missed.length === 0) {
+        const li = document.createElement('li');
+        li.textContent = 'Great job — you did not miss any phishing indicators.';
+        summaryList.appendChild(li);
+      } else {
+        missed.forEach(m => {
+          const li = document.createElement('li');
+          li.innerHTML = `<strong>${escapeHtml(m.subject)}</strong> — ${escapeHtml(m.from)}<br><em>Why this mattered:</em> ${escapeHtml(m.reason)}<br><em>Your answer:</em> ${m.userSaysPhishing ? 'Marked as PHISHING' : 'Marked as LEGIT'}`;
+          summaryList.appendChild(li);
+        });
+      }
+    }
+
+    // --- Utility: escape HTML for safe text rendering in some fields ---
+    function escapeHtml(str) {
+      if (!str) return '';
+      return String(str)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+    }
+
+    // --- Keyboard accessibility: allow Enter to trigger Next when visible ---
+    document.addEventListener('keydown', (ev) => {
+      if (ev.key === 'Enter') {
+        if (!nextBtnEl.classList.contains('hidden')) {
+          nextEmail();
+        }
+      }
+    });
+
+    // --- Initialize: small guard to ensure the file retains original citation note in console ---
+    console.log("Phishing Simulator loaded (Option A - 10 emails). Based on original user file."); // original file: see user upload.
+  </script>
+</body>
+</html>
